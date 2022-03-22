@@ -1,0 +1,374 @@
+---
+title: "Case Study: Bike-sharing"
+output: html_document
+date: '2022-03-09'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Citations
+From Google's Data Analysis Professional Certification
+
+## Scenario
+You are a junior data analyst working in the marketing analyst team at Cyclistic, a bike-share company in Chicago. The director of marketing believes the company’s future success depends on maximizing the number of annual memberships. Therefore, your team wants to understand how casual riders and annual members use Cyclistic bikes differently. From these insights, your team will design a new marketing strategy to convert casual riders into annual members. But first, Cyclistic executives must approve your recommendations, so they must be backed up with compelling data insights and professional data visualizations.
+
+## Business Question
+How does a bike-share navigate speedy success?
+
+## Other questions
+- Is there a duration difference between members and casual riders?
+- Is there a duration difference between regular versus motorized bike?
+- Is there a distance difference between regular versus motorized bike?
+- Is there a time of the week difference between members and casual riders?
+- How has membership and casual riders changed over time?
+- Is there a location difference between members and casual riders? Could this be used to market directly to casual?
+- How does weather and temperature effect ridership of member versus casual riders?
+
+## Import R libraries
+```{r, echo=FALSE}
+#install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel", "ggspatial", "libwgeom", "sf", "rnaturalearth", #"rnaturalearthdata"))
+library(tidyverse)
+library(lubridate)
+
+```
+
+
+## Import dataset
+
+```{r echo=FALSE}
+# Import Dataset
+list_of_files <- list.files(path="tripdata",
+                       recursive = T,
+                       pattern ="\\.csv$",
+                       full.names = T)
+
+trip_data <- readr::read_csv(list_of_files, id = "file_name")
+trip_data_t <- as_tibble(trip_data) # convert to tibble
+```
+## Clean data
+
+- end lat and long have < 6000 missing values
+- about 500 repeats based on ride_id
+
+```{r, echo=FALSE}
+
+# Use only last 12 months
+trip_data_previous_12m <- trip_data_t %>% 
+                          filter(started_at >= as.Date("2021-03-01"))
+                                       
+# are all ride_id unique? i.e. no duplicate data?
+nrow(trip_data_t)
+length(unique(trip_data_t$ride_id)) # 8929029
+nrow(trip_data_previous_12m)#
+length(unique(trip_data_previous_12m$ride_id)) # 5667986
+
+
+# Remove duplicated observations
+# Remove data without geolocation end data
+#trip_data_clean <- trip_data_t[trip_data_t %>% duplicated(), ]
+trip_data_clean <- trip_data_previous_12m %>% 
+  distinct(ride_id,  .keep_all = TRUE) %>%
+  drop_na(end_lat, end_lng)
+
+nrow(trip_data_clean) # Drops 4617 observations
+
+  
+# How many possible values for type of bike?
+unique(trip_data_clean$rideable_type) # electric_bike, #docked_bike, #classic_bike
+
+# check which values are in the member_casual variable
+table(trip_data_clean$member_casual)
+unique(trip_data_clean$member_casual) # member, casual
+```
+
+## Caclculate new variables
+
+```{r, echo=FALSE}
+# Calculate what day of the week the ride was on
+trip_data_clean$week_day <- wday(trip_data_clean$started_at, label=TRUE)
+
+# Calculate the month the ride was on
+trip_data_clean$month <- month(trip_data_clean$started_at, label=TRUE)
+
+### How long was the duration of bike rental?
+trip_data_clean$ride_duration <- as.numeric(difftime(trip_data_clean$ended_at, trip_data_clean$started_at))
+
+# Are there negative duration values?
+nrow(trip_data_clean[(trip_data_clean$ride_duration < 0), ]) #145 negative duration
+
+#Remove observations with negative duration & less than 5 seconds (10090 observations)
+trip_data_clean_v2 <- trip_data_clean[(!trip_data_clean$ride_duration < 5), ]
+nrow(trip_data_clean_v2)
+
+#Remove observations with duration greater than 12 hours (after 24 hours will be charged $1200 for the bike)
+trip_data_clean_v2_12h_plus <- trip_data_clean_v2[trip_data_clean_v2$ride_duration > 12*60*60,]
+trip_data_clean_v2 <- trip_data_clean_v2[!trip_data_clean_v2$ride_duration > 12*60*60,] #4248 removed
+
+#Remove for more than 3 hours (19246 observations)
+trip_data_clean_v2_3h_to_12h <- trip_data_clean_v2[trip_data_clean_v2$ride_duration > 3*60*60,]
+trip_data_clean_v2 <- trip_data_clean_v2[!trip_data_clean_v2$ride_duration > 3*60*60,]
+
+# Remove outliers 99% percentile
+#trip_data_clean_v2 <- trip_data_clean_v2[!trip_data_clean_v2$ride_duration > quantile(trip_data_clean_v2$ride_duration, .95),] 
+
+# Remove observations with duration less than 60 seconds
+#trip_data_clean_v2 <- trip_data_clean_v2[!trip_data_clean_v2$ride_duration <= 60,] #78025 removed
+
+#trip_data_clean_v2 <- trip_data_clean_v2[!trip_data_clean_v2$ride_duration <= 600,] #3274058 removed
+
+# Create subcategories of usertype and duration
+trip_data_clean_v2$duration_factor <- ceiling(trip_data_clean_v2$ride_duration) < 30*60
+trip_data_clean_v2 <- trip_data_clean_v2 %>% 
+                      mutate(
+                        duration_factor = ifelse(duration_factor == TRUE, "< 30", "< 180"))
+
+# Create a table of usertype and trip duration
+# table(trip_data_clean_v2$member_casual, trip_data_clean_v2$duration_factor) %>% kbl() %>% kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
+
+```
+## Outliers, Z-score, and log transformation
+
+Skewness Coefficient
+
+
+```{r}
+# library(EnvStats)
+# 
+# skewness(trip_data_clean_v2$trip_duration)
+# 
+# trip_data_clean_v2$z_score <- (trip_data_clean_v2$ride_duration - mean(trip_data_clean_v2$ride_duration)) / sd(trip_data_clean_v2$ride_duration)
+
+trip_data_clean_v2$ride_duration_log <- log(trip_data_clean_v2$ride_duration, 10)
+```
+
+- Outliers
+
+```{r}
+
+# library(outliers)
+# outlier(trip_data_clean_v2$ride_duration)
+```
+
+## Explore data
+
+```{r echo=FALSE}
+require(scales)
+
+
+#theme_set(theme_bw()) # black and white theme for ggplot
+#theme_set(theme_minimal()) #minimal theme
+theme_set(theme_classic())
+
+plot_member <- ggplot(data = trip_data_clean_v2, aes(x = member_casual, fill=member_casual)) +
+                  geom_bar(show.legend=FALSE) +
+                  scale_y_continuous(labels = scales::comma) +
+                  ggtitle("Total rides of members and casual users") +
+                  theme(plot.title = element_text(hjust = 0.5)) +
+                  ylab("Number of rides") + xlab("User type")
+
+# Box plot of members and casual users on rounded up minute 1, 2, 3, 4
+
+plot_duration <- ggplot(data = trip_data_clean_v2, 
+                        aes(x = ceiling(ride_duration/60), fill=member_casual, shape=member_casual)) +
+                 geom_bar(position="dodge") +
+                 ggtitle("Distribution of ride duration of members and casual users") +
+                 xlab("ride duration (min)") + ylab("count") +
+                 theme(legend.position = c(.55, .75), 
+                       legend.text = element_text(face = "bold"),
+                       plot.title = element_text(hjust = 0.5)) +
+                labs(fill='User type') 
+
+# Box plot using log transformed duration
+
+plot_duration_log <- ggplot(data = trip_data_clean_v2, 
+                        aes(x = ride_duration_log, fill=member_casual, shape=member_casual)) +
+                 geom_density(alpha = 0.3) +
+                 ggtitle("Probability distribution of log10 transformed ride duration") +
+                 xlab("ride duration (min)") + ylab("count") +
+                 theme(legend.position = c(.25, .65), 
+                       legend.text = element_text(face = "bold"),
+                       plot.title = element_text(hjust = 0.5)) +
+                labs(fill='User type') 
+
+# Normal boxplot
+boxplot_duration <- ggplot(data = trip_data_clean_v2, #head(trip_data_clean_v2, 1000), 
+                        aes(x = member_casual, y = (ride_duration/60))) + 
+                      geom_boxplot(alpha=0.3) + 
+                      scale_fill_brewer(palette="BuPu") +
+                      ggtitle("Boxplot of ride duration of members and casual users") +
+                      theme(plot.title = element_text(hjust = 0.5)) +
+                      ylab("ride duration (min)") + xlab("")
+
+
+# Boxplot of log transformed data
+boxplot_log_duration <- ggplot(data = trip_data_clean_v2, #head(trip_data_clean_v2, 1000), 
+                        aes(x = member_casual, y = ride_duration_log, fill = member_casual)) + 
+                        geom_boxplot(alpha=0.3) + 
+                        ggtitle("Boxplot of ride duration of members and casual users") +
+                        theme(legend.position = c(.85, .25), 
+                              legend.text = element_text(face = "bold"),
+                              plot.title = element_text(hjust = 0.5)) +
+                        labs(fill='User type') +
+                        ylab("log(ride duration)") + xlab("")
+
+# Time Use
+
+y_axis <- c()
+
+plot_yearly_use <- ggplot(data = trip_data_clean_v2, aes(x = year(started_at), fill=member_casual)) +
+                   geom_bar(position="dodge") +
+                   ggtitle("Last 12 month's yearly ridership of member and casual users") +
+                   scale_y_continuous(labels = scales::comma) +
+                        theme(legend.position = c(.85, .85), 
+                              legend.text = element_text(face = "bold"),
+                              plot.title = element_text(hjust = 0.5)) +
+                        labs(fill='User type') +
+                        ylab("log(ride duration)") + xlab("")
+
+# Plot monthly use of casual versus members for last 12 months
+# plot_monthly_use <- ggplot(data = trip_data_clean_v2, aes(x = as.Date(started_at, "%Y-%m-%d %h:%m:%s", tz="UTC"), fill=member_casual)) +
+#                     geom_bar(position="dodge") +
+#                     ggtitle("Last 12 month's monthly ridership of member and casual users") +
+#                     scale_y_continuous(labels = scales::comma) +
+#                     theme(legend.position = c(.10, .75), 
+#                               legend.text = element_text(face = "bold"),
+#                               plot.title = element_text(hjust = 0.5)) +
+#                     labs(fill='User type') +
+#                     xlab("month") + ylab("count") +
+#                     scale_x_date(date_labels = "%b %y", date_breaks = "1 month")
+
+plot_line_monthly_use <- ggplot(data = trip_data_clean_v2, aes(x = as.Date(started_at, "%Y-%m-%d %h:%m:%s", tz="UTC"), color=member_casual)) +
+                    geom_line(stat='count', size = 2) +
+                    ggtitle("Trips of member and casual users in the previous 12 months") +
+                    scale_y_continuous(labels = scales::comma) +
+                    theme(legend.position = c(.80, .75), 
+                              legend.text = element_text(face = "bold"),
+                              plot.title = element_text(hjust = 0.5)) +
+                    scale_color_discrete(name="User type") +
+                    xlab("month") + ylab("count") +
+                    scale_x_date(date_labels = "%b %y", date_breaks = "1 month")
+
+#Day of the week of casual versus members
+plot_day_of_week_use <- ggplot(data = trip_data_clean_v2, aes(x = week_day, fill=member_casual)) +
+                        geom_bar(position="dodge") +
+                        ggtitle("Trips for each day of the week") +
+                        scale_y_continuous(labels = scales::comma) +
+                        theme(legend.position = c(.15, .95), 
+                                  legend.text = element_text(face = "bold"),
+                                  plot.title = element_text(hjust = 0.5)) +
+                        labs(fill='User type') +
+                        xlab("weekday") + ylab("count")
+
+#Plot time of the day of casual versus members
+plot_hourly_use <- ggplot(data = trip_data_clean_v2, aes(x = hour(started_at), fill=member_casual)) +
+                   geom_bar(position="dodge") + 
+                   ggtitle("Trips for each hour in the day") +
+                   scale_y_continuous(labels = scales::comma) +
+                   scale_x_continuous(labels=c(0:23), breaks = c(0:23)) +
+                   theme(legend.position = c(.15, .75), 
+                            legend.text = element_text(face = "bold"),
+                            plot.title = element_text(hjust = 0.5)) +
+                   labs(fill='User type') +
+                   xlab("hour") + ylab("count")
+  
+
+# # Barplot by station distinguish between casual and members
+# plot_station <- ggplot(data = trip_data_clean_v2, aes(x = start_station_name, fill=member_casual)) +
+#   geom_bar(position="dodge")
+# ######### This shows that a lot of the station names are empty
+# 
+# # casual and members use of electric or classic bike
+# plot_bike_type <- ggplot(data = trip_data_clean_v2, aes(x = rideable_type, fill=member_casual)) +
+#   geom_bar(position="dodge")
+# ######### members are more likely to use classic bikes over electric_bikes while casual members 
+# 
+# # Plot average duration between members and casual users on electric or regular bikes
+# boxplot_duration <- ggplot(data = trip_data_clean_v2, #head(trip_data_clean_v2, 1000), 
+#                         aes(x = member_casual, y = (ride_duration/60))) + 
+#                       geom_boxplot(alpha=0.3) + 
+#                       ggtitle("Boxplot of ride duration of members and casual users") +
+#                       theme(plot.title = element_text(hjust = 0.5)) +
+#                       ylab("ride duration (min)") + xlab("")
+
+# Ride duration histogram
+histplot_duration <- ggplot(data = trip_data_clean_v2, aes(x = (ride_duration / 60))) + 
+                        geom_histogram(fill = "blue", binwidth=50, alpha=0.2) 
+
+
+
+histplot_zscore <- ggplot(data = trip_data_clean_v2, aes(x = z_score)) +
+    geom_histogram(fill = "blue")
+
+histplot_duration_log <- ggplot(data = trip_data_clean_v2, aes(x = ride_duration_log)) +
+                        geom_histogram(fill = "blue")
+```
+
+## Map of bike pickup
+
+```{r, echo=FALSE}
+#library("rnaturalearth")
+#library("rnaturalearthdata")
+if(!requireNamespace("devtools")) install.packages("devtools")
+devtools::install_github("dkahle/ggmap")
+library("ggmap")
+
+#key_google <- <enter secret key here>
+register_google(key=key_google, write = TRUE)
+
+# Try a Density Map
+#map_center <- geocode("chicago") 
+map_center <- geocode("1800 N Halsted St, Chicago, IL 60614")
+#map_center$lat <- map_center$lat - 1 # move map up
+#map_center <- c(lng = -87.63510534699509, lat = 41.93782465849838)
+chicago <- get_map(map_center, zoom = 12)
+Chicago_Map_pickup_topright <- ggmap(chicago, extent = "device", legend = "topright")
+Chicago_map_pickup_bottom <- ggmap(chicago, extent = "device", legend = c("bottom"))
+
+trip_data_random <- trip_data_clean_v2[sample(nrow(trip_data_previous_12m), 500000), ]
+
+overlay_start <- stat_density2d(
+    data = trip_data_random,
+    aes(x = start_lng, y = start_lat, fill = ..level.., alpha = ..level..),
+    size = 2, bins = 10,
+    geom = "polygon"
+  ) 
+
+#facet_Wrap_days <- facet_wrap(~wday(trip_data_random$started_at), nrow=3)
+
+Map_MemberCasual_Density <- Chicago_Map_pickup_topright + 
+                              overlay_start + 
+                              scale_fill_gradient(low = "#FFCCCB", high = "#cc0000") + 
+                              labs(fill="Density") + guides(alpha = F)  +
+                              facet_wrap(~member_casual, ncol=2) + 
+                              ggtitle("Casual Users Previous 12 months")
+
+Map_Weekday_Density <- Chicago_map_pickup_bottomright + 
+                              overlay_start + 
+                              scale_fill_gradient(low = "#FFCCCB", high = "#cc0000") + 
+                              labs(fill="Density") + guides(alpha = F)  +
+                              facet_wrap(~week_day, ncol=4)
+
+  
+Map_Weekday_MemberCasual_Density <- Chicago_map_pickup_bottom + 
+                              overlay_start + 
+                              scale_fill_gradient(low = "#FFCCCB", high = "#cc0000") + 
+                              labs(fill="Density") + guides(alpha = F)  +
+                              facet_wrap(facets = c(~member_casual, ~week_day), ncol=7.) +
+                              ggtitle("Density Map of Day of the Week Use") +
+                              theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+```{r, echo=FALSE}
+# Load packages needed to get the Weather Data for Chicago
+install.packages('devtools')
+library(devtools)
+install_github("Ram-N/weatherData")
+library(weatherData)
+```
+
+## Conclusion
+
+
+## Make presentation to share with stakeholders

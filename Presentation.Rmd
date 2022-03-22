@@ -1,0 +1,166 @@
+---
+title: "Cyclistic User Differences"
+author: 'Presented by: Kevin Spring'
+date: 'Last Updated: March 17, 2022'
+output:
+  ioslides_presentation:
+    widescreen: yes
+  beamer_presentation: default
+---
+
+<style>
+.forceBreak { 
+  -webkit-column-break-after: always; 
+  break-after: column; 
+  }
+h2 {
+  text-align: center;
+}  
+ 
+</style>
+
+## Cyclistic Chicago {.columns-2 .smaller}
+
+### Bike Share Program
+- 2016 launch in Chicago, IL
+- Bikes are unlocked from one station and returned to others
+- More than 5,800 bicycles and 600 docking stations
+
+<div class="centered">
+![](Presentation\\img\\bike-dock.jpg)
+</div>
+
+<p class="forceBreak"></p>
+
+### Annual Members
+  - $9 per month
+  - $108 billed upfront annually
+  - unlimited 45 minute ride time
+  - Extra fee past
+
+### Single Ride (Casual Users)
+  - $3.30 per 30 minute use time
+  - $0.15/minute after 30 minutes
+  - 11.5 hour rental would cost about $108)
+  
+### Day Pass (Casual Users)
+  - $15 per 3 hours
+  - One day pass per 24 hours
+
+
+## What are the differences between casual users and members?
+
+### Annual Members are more profitable than casual members
+
+- Targeted marketing toward casual users
+  - Location: Where users use the service
+  - Time: 
+	- Day of the week
+	- Time of the day
+	- Long versus short trip duration
+- Target casual members that use the service similar to annual members
+	- Potential to lure these casual users
+	- Hypothesize that casual users that use the service similar to annual members will be the best opportunity to convert to annual members.
+
+## Cyclistic Chicago Data {.columns-2 .smaller}
+
+### About Chicago
+- 3rd most populous city in the United States
+  - Pop. 2,746,388 in 2020 census
+- 234 sq mi
+- Diversified economy
+  - hub for finance, commerce, transportation
+- 58 million visitors a year
+
+![](Presentation\\img\\climate_chicago.png){width=50%}
+
+<p class="forceBreak"></p>
+
+- ### Reliable 
+  - Data derived from [Cyclistic Internal Data](https://divvy-tripdata.s3.amazonaws.com/index.html)
+  - [Data License Agreement](https://ride.divvybikes.com/data-license-agreement)
+- ### Current
+  - Last 12 months (March 2021 to February 2022)
+- ### Secure
+  - All identifying information has been removed
+- ### Limitations:
+  - Ride ID is not linked to specific users. Unknown if rides are independent or repeat users.
+
+## 6. Diving into the Data {.columns-2 .smaller}
+
+### Calculations
+- Month, day, hour of ride
+- Duration of ride
+
+### Inconsistencies
+
+- Removed duplicate entries (~ 3000)
+- Removed ride durations less than 1 minute
+- Removed ride durations greater than 3 hours
+   - ~4,000 trips greater than 12 hours
+   - ~19,000 trips greater than 3 hours and less than 12 hours
+- Some entries have missing docking station data
+   - Use GPS data for location analysis
+
+<p class="forceBreak"></p>
+
+### Summary statistics of cleaned data
+
+Table of total casual and members
+- count of rides
+- mean duration
+- median duration
+
+![](Presentation\\plots\\total_rides_usertype.png)
+
+## 9. Distribution is right-skewed and indicates short term rides are more favored{.flexbox .vcenter}
+
+![](Presentation\\plots\\plot_duration.png){height=90%}
+
+For statistical analysis the duration time will need to be transformed
+
+## Is there a significant difference between casual users and members in mean duration time? {.columns-2 .smaller}
+
+![](Presentation\\plots\\plot_duration_log.png){width=100%}
+
+<p class="forceBreak"></p>
+
+![](Presentation\\plots\\boxplot_usertype_duration_log.png){width=90%}
+
+## Cycle rentals are highest in the summer months {.flexbox .vcenter}
+
+![](Presentation\\plots\\plot_line_monthly.png){height=90%}
+
+## Casual members outnumber annual members on the weekend {.flexbox .vcenter}
+
+![](Presentation\\plots\\plot_bar_weekday.png){height=90%}
+
+## Annual members outnumber casual members during daytime hours {.flexbox .vcenter}
+
+![](Presentation\\plots\\plot_bar_hourly.png){height=90%}
+
+## Annual members are localized in business districts {.flexbox .vcenter}
+
+![](Presentation\\plots\\density_map_weekday.png){height=100%}
+
+## Conclusions {.columns-2 .smaller}
+
+### Summary
+- Casual users outnumber annual members on the weekend
+- Annual members outnumber casual users Monday through Friday.
+- Annual member use spikes between 6:00 to 8:00 and 16:00 to 19:00. Traditional communing hours
+- Annual members have highest density in the central business district
+- Casual users have more spread out density with hot spots in recreational areas
+
+<p class="forceBreak"></p>
+
+### Recommendations
+- Market to casual users that use the service similar to annual members
+  - Remind casual users of annual membership benefits
+  - Promote the savings when becoming an annual member
+- Conduct user survey through the app and in-person
+  - Identify how people are using the service (commute, recreation)
+- Test surge pricing for casual users during commuting and positive weather
+
+
+
