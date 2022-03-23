@@ -100,7 +100,6 @@ h2 {
 
 ### Inconsistencies
 
-- Removed duplicate entries (~ 3000)
 - Removed ride durations less than 1 minute
 - Removed ride durations greater than 3 hours
    - ~4,000 trips greater than 12 hours
