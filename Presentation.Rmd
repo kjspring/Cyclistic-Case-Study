@@ -48,16 +48,18 @@ h2 {
   - One day pass per 24 hours
 
 
-## What are the differences between casual users and members?
+## Differences between casual users and members?
 
 ### Annual Members are more profitable than casual members
+
+#### Anallysis will give insight on:
 
 - Targeted marketing toward casual users
   - Location: Where users use the service
   - Time: 
-	- Day of the week
-	- Time of the day
-	- Long versus short trip duration
+	  - Day of the week
+	  - Time of the day
+	- Duration of trip
 - Target casual members that use the service similar to annual members
 	- Potential to lure these casual users
 	- Hypothesize that casual users that use the service similar to annual members will be the best opportunity to convert to annual members.
@@ -72,7 +74,7 @@ h2 {
   - hub for finance, commerce, transportation
 - 58 million visitors a year
 
-![](Presentation\\img\\climate_chicago.png){width=50%}
+![](Presentation\\img\\climate_chicago.png){width=80%}
 
 <p class="forceBreak"></p>
 
@@ -86,9 +88,13 @@ h2 {
 - ### Limitations:
   - Ride ID is not linked to specific users. Unknown if rides are independent or repeat users.
 
-## 6. Diving into the Data {.columns-2 .smaller}
+## Diving into the Data {.columns-2 .smaller}
 
-### Calculations
+### About the data
+- Date Range: March 2021 - Feburary 2022
+- Total observations, 5,667,986
+
+### Calculated
 - Month, day, hour of ride
 - Duration of ride
 
@@ -111,7 +117,7 @@ Table of total casual and members
 - mean duration
 - median duration
 
-![](Presentation\\plots\\total_rides_usertype.png)
+![](Presentation\\plots\\total_rides_usertype.png){width=80%}
 
 ## 9. Distribution is right-skewed and indicates short term rides are more favored{.flexbox .vcenter}
 
