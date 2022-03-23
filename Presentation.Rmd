@@ -88,7 +88,7 @@ h2 {
 - ### Limitations:
   - Ride ID is not linked to specific users. Unknown if rides are independent or repeat users.
 
-## Diving into the Data {.columns-2 .smaller}
+## Summary Statistics {.columns-2 .smaller}
 
 ### About the data
 - Date Range: March 2021 - Feburary 2022
@@ -111,20 +111,20 @@ h2 {
 
 ### Summary statistics of cleaned data
 
-Table of total casual and members
-- count of rides
 - mean duration
+  - Casual users: 24.0 min
+  - Annual members: 12.8 min
 - median duration
+  - Casual users: 15.8 min
+  - Annual members: 9.5 min
 
 ![](Presentation\\plots\\total_rides_usertype.png){width=80%}
 
-## 9. Distribution is right-skewed and indicates short term rides are more favored{.flexbox .vcenter}
+## Distribution is right-skewed and indicates short term rides are favored{.flexbox .vcenter}
 
 ![](Presentation\\plots\\plot_duration.png){height=90%}
 
-For statistical analysis the duration time will need to be transformed
-
-## Is there a significant difference between casual users and members in mean duration time? {.columns-2 .smaller}
+## Log transformed ride duration gives better visualization but data is still not normally distributed {.columns-2 .smaller}
 
 ![](Presentation\\plots\\plot_duration_log.png){width=100%}
 
